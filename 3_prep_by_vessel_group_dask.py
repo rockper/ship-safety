@@ -1,6 +1,6 @@
 # Vessel Type codes are a 2 or 4-digit (since 2017) code (See "vessel_type_codes_2018.pdf").
 # There are 66 vessel type codes. 
-# These will be collected into 10 broad vessel categories:
+# These will be collected into 10 broad vessel groups:
 # 1 passenger
 # 2 cargo
 # 3 tanker
@@ -32,7 +32,7 @@ vessels = pd.read_csv(metadata_file, header=0, names=col_names, dtype=col_dtypes
 # Dask can read partitioned parquet.
 ddf = dd.read_parquet(path=DATA_DIR + 'tracks_3m_pqt/')
 
-vcat2vtypecode_dict = {'pleasure': ['36', '37', '1019'], 
+vgroup2vtypecode_dict = {'pleasure': ['36', '37', '1019'], 
                     'publicService': [str(i) for i in list(range(50, 60))] + ['1018'], 
                     'passenger': [str(i) for i in list(range(60, 70))] + ['1012', '1013', '1014', '1015'], 
                     'cargo': [str(i) for i in list(range(70, 80))] + ['1003', '1004', '1016'], 
@@ -45,24 +45,24 @@ vcat2vtypecode_dict = {'pleasure': ['36', '37', '1019'],
                    }
 
 
-def getDfByVesselType(ddf=ddf, vessel_category='cargo'):
-  """
-  Returns a dask DataFrame for all vessels in the specified category.
-  Has not been materialized to pandas with '.compute()'
-  """
-  if vessel_category == 'unknown':
-      mmsis = (vessels[vessels['vessel_type'].isnull()])['mmsi']
-  else:
-      mmsis = (vessels[vessels['vessel_type'].isin(vcat2vtypecode_dict[vessel_category])])['mmsi']
-  vesselTypeDf = ddf[ddf['mmsi'].isin(mmsis)]
-  return vesselTypeDf
+def getDfByVesselGroup(vessel_group='cargo', ddf=ddf):
+    """
+    Returns a dask DataFrame for all vessels in the specified group.
+    Has not been materialized to pandas with '.compute()'
+    """
+    if vessel_group == 'unknown':
+        mmsis = (vessels[vessels['vessel_type'].isnull()])['mmsi']
+    else:
+        mmsis = (vessels[vessels['vessel_type'].isin(vgroup2vtypecode_dict[vessel_group])])['mmsi']
+    vesselGroupDf = ddf[ddf['mmsi'].isin(mmsis)]
+    return vesselGroupDf
 
 
-def writeVesselTypeToParquet(ddf=ddf, vessel_category='cargo', period='3m'):
-  """
-  Writes a single parquet file for all mmsis in a specified vessel category for '3m' or '3y'
-  """
-  ddf_filtered_by_vt = getDfByVesselType(ddf, vessel_category).compute()
-  outputFile = DATA_DIR + 'by_vessel_type_' + period + '/' + vessel_category + '.parquet'
-  ddf_filtered_by_vt.to_parquet(outputFile)
-  return
+def writeVesselGroupToParquet(vessel_group='cargo', period='3m', ddf=ddf):
+    """
+    Writes a single parquet file for all mmsis in a specified vessel category for '3m' or '3y'
+    """
+    ddf_filtered_by_vgroup = getDfByVesselGroup(vessel_group, ddf).compute()
+    outputFile = DATA_DIR + 'by_vessel_group_' + period + '/' + vessel_group + '.parquet'
+    ddf_filtered_by_vgroup.to_parquet(outputFile)
+    return
